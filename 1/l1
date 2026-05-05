@@ -1,0 +1,567 @@
+1.
+#include <iostream>
+#include <string>
+#include <locale>
+
+using namespace std;
+
+class Tvaryna {
+private:
+    string klasyfikacija;
+    int kintcivky;
+    int naschadvky;
+
+public:
+    Tvaryna() {
+        klasyfikacija = "Невідома";
+        kintcivky = 0;
+        naschadvky = 0;
+    }
+
+    Tvaryna(string klasif, int kintc, int naschad) {
+        klasyfikacija = klasif;
+        kintcivky = kintc;
+        naschadvky = naschad;
+    }
+
+    virtual ~Tvaryna() {}
+
+    virtual void druk() const {
+        cout << "--- Інформація про тварину ---" << endl;
+        cout << "Класифікація: " << klasyfikacija << endl;
+        cout << "Число кінцівок: " << kintcivky << endl;
+        cout << "Число нащадків: " << naschadvky << endl;
+    }
+
+    void zminyty_naschadvky(int nove_chyslo) {
+        naschadvky = nove_chyslo;
+    }
+
+    int get_naschadvky() const {
+        return naschadvky;
+    }
+
+    string get_klasyfikacija() const {
+        return klasyfikacija;
+    }
+
+    int get_kintcivky() const {
+        return kintcivky;
+    }
+};
+
+class DomashnyaTvaryna : public Tvaryna {
+private:
+    string klychka;
+
+public:
+    DomashnyaTvaryna() : Tvaryna() {
+        klychka = "Без клички";
+    }
+
+    DomashnyaTvaryna(string kych) : Tvaryna() {
+        klychka = kych;
+    }
+
+    DomashnyaTvaryna(string kych, string klasif) : Tvaryna(klasif, 0, 0) {
+        klychka = kych;
+    }
+
+    DomashnyaTvaryna(string kych, string klasif, int kintc) : Tvaryna(klasif, kintc, 0) {
+        klychka = kych;
+    }
+
+    DomashnyaTvaryna(string kych, string klasif, int kintc, int naschad)
+        : Tvaryna(klasif, kintc, naschad) {
+        klychka = kych;
+    }
+
+    DomashnyaTvaryna(const DomashnyaTvaryna& other)
+        : Tvaryna(other.get_klasyfikacija(), other.get_kintcivky(), other.get_naschadvky()) {
+        klychka = other.klychka;
+    }
+
+    ~DomashnyaTvaryna() {}
+
+    void druk() const override {
+        cout << "\n=== Інформація про домашню тварину ===" << endl;
+        Tvaryna::druk();
+        cout << "Кличка: " << klychka << endl;
+    }
+
+    void zminyty_klychku(string nova_klychka) {
+        klychka = nova_klychka;
+    }
+
+    void zminyty_naschadvky(int nove_chyslo) {
+        Tvaryna::zminyty_naschadvky(nove_chyslo);
+    }
+
+    string get_klychka() const {
+        return klychka;
+    }
+};
+
+void testuvannya() {
+    Tvaryna tv1;
+    tv1.druk();
+
+    Tvaryna tv2("Ссавець", 4, 5);
+    tv2.druk();
+    tv2.zminyty_naschadvky(10);
+
+    DomashnyaTvaryna dt1;
+    dt1.druk();
+
+    DomashnyaTvaryna dt2("Барс");
+    dt2.druk();
+
+    DomashnyaTvaryna dt3("Мурзик", "Кіт");
+    dt3.druk();
+
+    DomashnyaTvaryna dt4("Рекс", "Собака", 4);
+    dt4.druk();
+
+    DomashnyaTvaryna dt5("Вовчиця", "Вовк", 4, 3);
+    dt5.druk();
+
+    DomashnyaTvaryna dt6 = dt5;
+    dt6.druk();
+
+    dt5.zminyty_klychku("Царівна");
+    dt5.zminyty_naschadvky(7);
+    dt5.druk();
+
+    Tvaryna* ptv = &dt4;
+    ptv->druk();
+
+    cout << dt5.get_klychka() << endl;
+    cout << dt4.get_klasyfikacija() << endl;
+    cout << dt4.get_kintcivky() << endl;
+    cout << dt5.get_naschadvky() << endl;
+}
+
+int main() {
+    setlocale(LC_ALL, "");
+    testuvannya();
+    return 0;
+}
+2.
+#include <iostream>
+#include <cstring>
+
+// ============================================================
+//  Клас Tail (Хвіст)
+// ============================================================
+class Tail {
+private:
+    double length;   // довжина хвоста (см)
+
+public:
+    // Конструктор за замовчуванням
+    Tail() : length(0.0) {
+        std::cout << "[Tail] Конструктор за замовчуванням (length=0)\n";
+    }
+
+    // Конструктор з параметром
+    explicit Tail(double len) : length(len) {
+        std::cout << "[Tail] Конструктор з параметром (length=" << length << ")\n";
+    }
+
+    // Конструктор копіювання
+    Tail(const Tail& other) : length(other.length) {
+        std::cout << "[Tail] Конструктор копіювання (length=" << length << ")\n";
+    }
+
+    // Метод доступу: отримати довжину
+    double getLength() const { return length; }
+
+    // Метод доступу: встановити довжину
+    void setLength(double len) { length = len; }
+
+    ~Tail() {
+        std::cout << "[Tail] Деструктор (length=" << length << ")\n";
+    }
+};
+
+// ============================================================
+//  Базовий клас Dog (Собака)
+// ============================================================
+class Dog {
+private:
+    Tail   tail;     // агрегований об'єкт «хвіст»
+    char*  color;    // вказівник на рядок (колір шерсті)
+    int    age;      // вік (роки)
+
+public:
+    // Конструктор за замовчуванням
+    Dog() : tail(), age(0) {
+        color = new char[1];
+        color[0] = '\0';
+        std::cout << "[Dog] Конструктор за замовчуванням\n";
+    }
+
+    // Конструктор з параметрами
+    Dog(const char* clr, int a, double tailLen)
+        : tail(tailLen), age(a)
+    {
+        color = new char[std::strlen(clr) + 1];
+        std::strcpy(color, clr);
+        std::cout << "[Dog] Конструктор з параметрами: color=\""
+                  << color << "\", age=" << age << "\n";
+    }
+
+    // Конструктор копіювання (глибоке копіювання)
+    Dog(const Dog& other) : tail(other.tail), age(other.age) {
+        color = new char[std::strlen(other.color) + 1];
+        std::strcpy(color, other.color);
+        std::cout << "[Dog] Конструктор копіювання\n";
+    }
+
+    // Оператор присвоєння (глибоке копіювання)
+    Dog& operator=(const Dog& other) {
+        if (this == &other) return *this;
+        delete[] color;
+        color = new char[std::strlen(other.color) + 1];
+        std::strcpy(color, other.color);
+        age  = other.age;
+        tail = other.tail;
+        return *this;
+    }
+
+    // Методи доступу
+    const char* getColor()  const { return color; }
+    int         getAge()    const { return age; }
+    double      getTailLen()const { return tail.getLength(); }
+
+    void setColor(const char* clr) {
+        delete[] color;
+        color = new char[std::strlen(clr) + 1];
+        std::strcpy(color, clr);
+    }
+    void setAge(int a)          { age = a; }
+    void setTailLen(double len) { tail.setLength(len); }
+
+    // Деструктор
+    virtual ~Dog() {
+        std::cout << "[Dog] Деструктор: color=\"" << color << "\"\n";
+        delete[] color;
+    }
+};
+
+// ============================================================
+//  Похідний клас NamedDog (Собака з кличкою)
+// ============================================================
+class NamedDog : public Dog {
+private:
+    char* name;   // вказівник на рядок (кличка)
+
+public:
+    // Конструктор за замовчуванням
+    NamedDog() : Dog() {
+        name = new char[1];
+        name[0] = '\0';
+        std::cout << "[NamedDog] Конструктор за замовчуванням\n";
+    }
+
+    // Конструктор з параметрами
+    NamedDog(const char* nm, const char* clr, int a, double tailLen)
+        : Dog(clr, a, tailLen)
+    {
+        name = new char[std::strlen(nm) + 1];
+        std::strcpy(name, nm);
+        std::cout << "[NamedDog] Конструктор з параметрами: name=\""
+                  << name << "\"\n";
+    }
+
+    // Конструктор копіювання
+    NamedDog(const NamedDog& other) : Dog(other) {
+        name = new char[std::strlen(other.name) + 1];
+        std::strcpy(name, other.name);
+        std::cout << "[NamedDog] Конструктор копіювання\n";
+    }
+
+    // Оператор присвоєння
+    NamedDog& operator=(const NamedDog& other) {
+        if (this == &other) return *this;
+        Dog::operator=(other);
+        delete[] name;
+        name = new char[std::strlen(other.name) + 1];
+        std::strcpy(name, other.name);
+        return *this;
+    }
+
+    // Метод доступу
+    const char* getName() const { return name; }
+    void setName(const char* nm) {
+        delete[] name;
+        name = new char[std::strlen(nm) + 1];
+        std::strcpy(name, nm);
+    }
+
+    // Функція друку
+    void print() const {
+        std::cout << "-------------------------------\n"
+                  << "Кличка  : " << name          << "\n"
+                  << "Колір   : " << getColor()    << "\n"
+                  << "Вік     : " << getAge()      << " р.\n"
+                  << "Хвіст   : " << getTailLen()  << " см\n"
+                  << "-------------------------------\n";
+    }
+
+    // Деструктор
+    ~NamedDog() override {
+        std::cout << "[NamedDog] Деструктор: name=\"" << name << "\"\n";
+        delete[] name;
+    }
+};
+
+// ============================================================
+//  main — демонстрація роботи
+// ============================================================
+int main() {
+    std::cout << "=== Створення об'єктів ===\n";
+    NamedDog dog1("Рекс",  "руда",   3, 25.0);
+    NamedDog dog2("Кулька","чорна",  5, 18.5);
+    NamedDog dog3;                         // конструктор за замовчуванням
+
+    std::cout << "\n=== Друк dog1 ===\n";
+    dog1.print();
+
+    std::cout << "\n=== Друк dog2 ===\n";
+    dog2.print();
+
+    std::cout << "\n=== Копіювання dog1 -> dog3 ===\n";
+    dog3 = dog1;
+    dog3.setName("Рекс-молодший");
+    dog3.print();
+
+    std::cout << "\n=== Конструктор копіювання dog4(dog2) ===\n";
+    NamedDog dog4(dog2);
+    dog4.print();
+
+    std::cout << "\n=== Знищення об'єктів ===\n";
+    // деструктори викликаються автоматично при виході з блоку
+    return 0;
+}
+3.
+#include <iostream>
+#include <string>
+#include <sstream>
+
+using namespace std;
+
+// ============================================================
+//  Базовий клас Education (Освіта)
+// ============================================================
+class Education {
+protected:
+    string institution;   // назва закладу
+    string specialty;     // спеціальність
+    int    graduationYear;// рік закінчення
+
+public:
+    // ---- Конструктори ----------------------------------------
+    Education()
+        : institution(""), specialty(""), graduationYear(0)
+    {
+        cout << "[Education] Конструктор за замовчуванням\n";
+    }
+
+    Education(const string& inst,
+              const string& spec,
+              int year)
+        : institution(inst), specialty(spec), graduationYear(year)
+    {
+        cout << "[Education] Конструктор з параметрами\n";
+    }
+
+    // Конструктор копіювання
+    Education(const Education& other)
+        : institution(other.institution),
+          specialty(other.specialty),
+          graduationYear(other.graduationYear)
+    {
+        cout << "[Education] Конструктор копіювання\n";
+    }
+
+    // ---- Оператор присвоювання ------------------------------
+    Education& operator=(const Education& other) {
+        if (this == &other) return *this;
+        institution    = other.institution;
+        specialty      = other.specialty;
+        graduationYear = other.graduationYear;
+        cout << "[Education] operator=\n";
+        return *this;
+    }
+
+    // ---- Методи доступу ------------------------------------
+    string getInstitution()   const { return institution; }
+    string getSpecialty()     const { return specialty; }
+    int    getGraduationYear()const { return graduationYear; }
+
+    void setInstitution   (const string& v) { institution    = v; }
+    void setSpecialty     (const string& v) { specialty      = v; }
+    void setGraduationYear(int v)           { graduationYear = v; }
+
+    // ---- Виведення / введення (virtual) --------------------
+    virtual void print(ostream& os) const {
+        os << "Заклад        : " << institution    << "\n"
+           << "Спеціальність : " << specialty      << "\n"
+           << "Рік закінчення: " << graduationYear << "\n";
+    }
+
+    virtual void read(istream& is) {
+        cout << "  Заклад: ";
+        getline(is >> ws, institution);
+        cout << "  Спеціальність: ";
+        getline(is >> ws, specialty);
+        cout << "  Рік закінчення: ";
+        is >> graduationYear;
+    }
+
+    // ---- Деструктор ----------------------------------------
+    virtual ~Education() {
+        cout << "[Education] Деструктор: " << institution << "\n";
+    }
+};
+
+// Перевантаження << та >> для Education
+ostream& operator<<(ostream& os, const Education& e) {
+    e.print(os);
+    return os;
+}
+
+istream& operator>>(istream& is, Education& e) {
+    e.read(is);
+    return is;
+}
+
+// ============================================================
+//  Похідний клас HigherEducation (Вища освіта)
+// ============================================================
+class HigherEducation : public Education {
+private:
+    string degree;       // ступінь: бакалавр / магістр / PhD
+    string department;   // кафедра / факультет
+    double gpa;          // середній бал (GPA)
+
+public:
+    // ---- Конструктори ----------------------------------------
+    HigherEducation()
+        : Education(), degree(""), department(""), gpa(0.0)
+    {
+        cout << "[HigherEducation] Конструктор за замовчуванням\n";
+    }
+
+    HigherEducation(const string& inst,
+                    const string& spec,
+                    int           year,
+                    const string& deg,
+                    const string& dept,
+                    double        gpaVal)
+        : Education(inst, spec, year),
+          degree(deg), department(dept), gpa(gpaVal)
+    {
+        cout << "[HigherEducation] Конструктор з параметрами\n";
+    }
+
+    // Конструктор копіювання через базовий клас
+    HigherEducation(const HigherEducation& other)
+        : Education(other),          // виклик конструктора копіювання базового
+          degree(other.degree),
+          department(other.department),
+          gpa(other.gpa)
+    {
+        cout << "[HigherEducation] Конструктор копіювання\n";
+    }
+
+    // ---- Оператор присвоювання через базовий клас ----------
+    HigherEducation& operator=(const HigherEducation& other) {
+        if (this == &other) return *this;
+        Education::operator=(other);   // присвоювання базової частини
+        degree     = other.degree;
+        department = other.department;
+        gpa        = other.gpa;
+        cout << "[HigherEducation] operator=\n";
+        return *this;
+    }
+
+    // ---- Методи доступу ------------------------------------
+    string getDegree()    const { return degree; }
+    string getDepartment()const { return department; }
+    double getGPA()       const { return gpa; }
+
+    void setDegree    (const string& v) { degree     = v; }
+    void setDepartment(const string& v) { department = v; }
+    void setGPA       (double v)        { gpa        = v; }
+
+    // ---- Перевизначення виведення --------------------------
+    void print(ostream& os) const override {
+        Education::print(os);                  // виводимо базову частину
+        os << "Ступінь       : " << degree     << "\n"
+           << "Кафедра       : " << department << "\n"
+           << "Середній бал  : " << gpa        << "\n";
+    }
+
+    // ---- Перевизначення введення ---------------------------
+    void read(istream& is) override {
+        Education::read(is);                   // зчитуємо базову частину
+        cout << "  Ступінь (бакалавр/магістр/PhD): ";
+        getline(is >> ws, degree);
+        cout << "  Кафедра/Факультет: ";
+        getline(is >> ws, department);
+        cout << "  Середній бал (GPA): ";
+        is >> gpa;
+    }
+
+    // ---- Деструктор ----------------------------------------
+    ~HigherEducation() override {
+        cout << "[HigherEducation] Деструктор: " << degree << "\n";
+    }
+};
+
+// ============================================================
+//  main — демонстрація
+// ============================================================
+int main() {
+    cout << "=== 1. Створення об'єктів ===\n";
+    Education e1("Школа №5 м.Чернівці", "Загальна середня освіта", 2018);
+    HigherEducation h1("ЧНУ ім. Федьковича", "Комп'ютерні науки", 2022,
+                       "Бакалавр", "Кафедра комп'ютерних наук", 4.7);
+
+    cout << "\n=== 2. Виведення (operator<<) ===\n";
+    cout << "-- Education --\n"      << e1;
+    cout << "-- HigherEducation --\n" << h1;
+
+    cout << "\n=== 3. Конструктор копіювання HigherEducation ===\n";
+    HigherEducation h2(h1);
+    cout << "-- Копія h2 --\n" << h2;
+
+    cout << "\n=== 4. Оператор присвоювання ===\n";
+    HigherEducation h3;
+    h3 = h1;
+    h3.setDegree("Магістр");
+    h3.setGPA(4.9);
+    cout << "-- h3 після присвоювання і зміни --\n" << h3;
+
+    cout << "\n=== 5. Поліморфне виведення через базовий вказівник ===\n";
+    Education* ptr = &h1;
+    cout << *ptr;   // викликає HigherEducation::print завдяки virtual
+
+    cout << "\n=== 6. Введення з рядкового потоку (симуляція cin) ===\n";
+    string input =
+        "Технічний коледж\n"
+        "Програмування\n"
+        "2020\n"
+        "Молодший спеціаліст\n"
+        "ВК Інформатики\n"
+        "4.2\n";
+    istringstream iss(input);
+    HigherEducation h4;
+    h4.read(iss);
+    cout << "-- Введений об'єкт h4 --\n" << h4;
+
+    cout << "\n=== Знищення об'єктів ===\n";
+    return 0;
+}
