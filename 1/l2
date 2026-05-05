@@ -1,0 +1,313 @@
+2.1
+#include <iostream>
+#include <cmath>
+#include <string>
+
+using namespace std;
+
+// ============================================================
+//  Абстрактний базовий клас Quadrilateral (Чотирикутник)
+// ============================================================
+class Quadrilateral {
+public:
+    // Чисто віртуальні функції — клас стає абстрактним
+    virtual double area()      const = 0;
+    virtual double perimeter() const = 0;
+    virtual string name()      const = 0;
+
+    // Загальний метод виведення (не чисто віртуальний)
+    virtual void print(ostream& os) const {
+        os << "┌─ " << name() << "\n"
+           << "│  Площа     : " << area()      << "\n"
+           << "│  Периметр  : " << perimeter() << "\n"
+           << "└─────────────────────────\n";
+    }
+
+    virtual ~Quadrilateral() = default;
+};
+
+ostream& operator<<(ostream& os, const Quadrilateral& q) {
+    q.print(os);
+    return os;
+}
+
+// ============================================================
+//  Квадрат  (усі сторони рівні, всі кути 90°)
+//  a — сторона
+// ============================================================
+class Square : public Quadrilateral {
+private:
+    double a;   // сторона
+
+public:
+    explicit Square(double side) : a(side) {}
+
+    double area()      const override { return a * a; }
+    double perimeter() const override { return 4 * a; }
+    string name()      const override { return "Квадрат"; }
+
+    void print(ostream& os) const override {
+        os << "┌─ " << name() << "\n"
+           << "│  Сторона   : " << a           << "\n"
+           << "│  Площа     : " << area()      << "\n"
+           << "│  Периметр  : " << perimeter() << "\n"
+           << "└─────────────────────────\n";
+    }
+
+    double getSide() const { return a; }
+};
+
+// ============================================================
+//  Прямокутник  (протилежні сторони рівні, всі кути 90°)
+//  a — довжина, b — ширина
+// ============================================================
+class Rectangle : public Quadrilateral {
+private:
+    double a, b;    // довжина і ширина
+
+public:
+    Rectangle(double length, double width) : a(length), b(width) {}
+
+    double area()      const override { return a * b; }
+    double perimeter() const override { return 2 * (a + b); }
+    string name()      const override { return "Прямокутник"; }
+
+    void print(ostream& os) const override {
+        os << "┌─ " << name() << "\n"
+           << "│  Довжина    : " << a           << "\n"
+           << "│  Ширина     : " << b           << "\n"
+           << "│  Площа      : " << area()      << "\n"
+           << "│  Периметр   : " << perimeter() << "\n"
+           << "└─────────────────────────\n";
+    }
+};
+
+// ============================================================
+//  Паралелограм  (протилежні сторони рівні та паралельні)
+//  a — основа, b — бічна сторона, alpha — кут між ними (°)
+//  S = a * b * sin(alpha)
+//  P = 2*(a + b)
+// ============================================================
+class Parallelogram : public Quadrilateral {
+private:
+    double a, b, alpha;   // основа, бічна сторона, кут у градусах
+
+    static double toRad(double deg) { return deg * M_PI / 180.0; }
+
+public:
+    Parallelogram(double base, double side, double angleDeg)
+        : a(base), b(side), alpha(angleDeg) {}
+
+    double area()      const override { return a * b * sin(toRad(alpha)); }
+    double perimeter() const override { return 2 * (a + b); }
+    string name()      const override { return "Паралелограм"; }
+
+    void print(ostream& os) const override {
+        os << "┌─ " << name() << "\n"
+           << "│  Основа     : " << a           << "\n"
+           << "│  Бічна ст.  : " << b           << "\n"
+           << "│  Кут (°)    : " << alpha        << "\n"
+           << "│  Площа      : " << area()      << "\n"
+           << "│  Периметр   : " << perimeter() << "\n"
+           << "└─────────────────────────\n";
+    }
+};
+
+// ============================================================
+//  Трапеція  (одна пара паралельних сторін)
+//  a — верхня основа, b — нижня основа
+//  c, d — бічні сторони
+//  S = ((a + b) / 2) * h,  h = висота
+//  Висота через сторони (формула Герона для трапеції):
+//    cos(A) = (b - a + c² - d²) / (2*(b - a)*c)  → h = c*sin(A)
+//  Спрощення: приймаємо висоту h як окремий параметр
+// ============================================================
+class Trapezoid : public Quadrilateral {
+private:
+    double a, b;    // основи (a < b або a > b)
+    double c, d;    // бічні сторони
+    double h;       // висота
+
+public:
+    // a, b — основи; c, d — бічні; h — висота
+    Trapezoid(double topBase, double botBase,
+              double leftSide, double rightSide, double height)
+        : a(topBase), b(botBase), c(leftSide), d(rightSide), h(height) {}
+
+    double area()      const override { return (a + b) / 2.0 * h; }
+    double perimeter() const override { return a + b + c + d; }
+    string name()      const override { return "Трапеція"; }
+
+    void print(ostream& os) const override {
+        os << "┌─ " << name() << "\n"
+           << "│  Основа a   : " << a           << "\n"
+           << "│  Основа b   : " << b           << "\n"
+           << "│  Бічна c    : " << c           << "\n"
+           << "│  Бічна d    : " << d           << "\n"
+           << "│  Висота     : " << h           << "\n"
+           << "│  Площа      : " << area()      << "\n"
+           << "│  Периметр   : " << perimeter() << "\n"
+           << "└─────────────────────────\n";
+    }
+};
+
+// ============================================================
+//  main — демонстрація поліморфізму
+// ============================================================
+int main() {
+    // Масив вказівників на абстрактний базовий клас
+    const int N = 4;
+    Quadrilateral* shapes[N] = {
+        new Square(5),
+        new Rectangle(8, 3),
+        new Parallelogram(10, 6, 60),
+        new Trapezoid(4, 10, 5, 5, 4)
+    };
+
+    cout << "======= Усі чотирикутники =======\n\n";
+    for (int i = 0; i < N; ++i)
+        cout << *shapes[i];
+
+    cout << "\n====== Пошук найбільшої площі ======\n";
+    int maxIdx = 0;
+    for (int i = 1; i < N; ++i)
+        if (shapes[i]->area() > shapes[maxIdx]->area())
+            maxIdx = i;
+    cout << "Найбільша площа: " << shapes[maxIdx]->name()
+         << " = " << shapes[maxIdx]->area() << "\n";
+
+    cout << "\n====== Пошук найменшого периметру ======\n";
+    int minIdx = 0;
+    for (int i = 1; i < N; ++i)
+        if (shapes[i]->perimeter() < shapes[minIdx]->perimeter())
+            minIdx = i;
+    cout << "Найменший периметр: " << shapes[minIdx]->name()
+         << " = " << shapes[minIdx]->perimeter() << "\n";
+
+    // Звільнення пам'яті
+    for (int i = 0; i < N; ++i)
+        delete shapes[i];
+
+    return 0;
+}
+2.2
+#include <iostream>
+#include <cmath>
+#include <string>
+
+using namespace std;
+
+class Quadrilateral {
+public:
+    virtual double area()      const = 0;
+    virtual double perimeter() const = 0;
+    virtual string name()      const = 0;
+
+    virtual void print(ostream& os) const {
+        os << "[ " << name() << " ]\n"
+           << "  Площа    : " << area()      << "\n"
+           << "  Периметр : " << perimeter() << "\n";
+    }
+
+    virtual ~Quadrilateral() = default;
+};
+
+ostream& operator<<(ostream& os, const Quadrilateral& q) {
+    q.print(os);
+    return os;
+}
+
+class Square : public Quadrilateral {
+    double a;
+public:
+    Square(double side) : a(side) {}
+
+    double area()      const override { return a * a; }
+    double perimeter() const override { return 4 * a; }
+    string name()      const override { return "Квадрат"; }
+
+    void print(ostream& os) const override {
+        os << "[ " << name() << " ]  a=" << a << "\n"
+           << "  Площа    : " << area()      << "\n"
+           << "  Периметр : " << perimeter() << "\n";
+    }
+};
+
+class Rectangle : public Quadrilateral {
+    double a, b;
+public:
+    Rectangle(double length, double width) : a(length), b(width) {}
+
+    double area()      const override { return a * b; }
+    double perimeter() const override { return 2 * (a + b); }
+    string name()      const override { return "Прямокутник"; }
+
+    void print(ostream& os) const override {
+        os << "[ " << name() << " ]  a=" << a << "  b=" << b << "\n"
+           << "  Площа    : " << area()      << "\n"
+           << "  Периметр : " << perimeter() << "\n";
+    }
+};
+
+class Parallelogram : public Quadrilateral {
+    double a, b, alpha;
+public:
+    Parallelogram(double base, double side, double angleDeg)
+        : a(base), b(side), alpha(angleDeg) {}
+
+    double area()      const override { return a * b * sin(alpha * M_PI / 180.0); }
+    double perimeter() const override { return 2 * (a + b); }
+    string name()      const override { return "Паралелограм"; }
+
+    void print(ostream& os) const override {
+        os << "[ " << name() << " ]  a=" << a << "  b=" << b << "  alpha=" << alpha << "\n"
+           << "  Площа    : " << area()      << "\n"
+           << "  Периметр : " << perimeter() << "\n";
+    }
+};
+
+class Trapezoid : public Quadrilateral {
+    double a, b, c, d, h;
+public:
+    Trapezoid(double topBase, double botBase,
+              double left, double right, double height)
+        : a(topBase), b(botBase), c(left), d(right), h(height) {}
+
+    double area()      const override { return (a + b) / 2.0 * h; }
+    double perimeter() const override { return a + b + c + d; }
+    string name()      const override { return "Трапеція"; }
+
+    void print(ostream& os) const override {
+        os << "[ " << name() << " ]  a=" << a << "  b=" << b
+           << "  c=" << c << "  d=" << d << "  h=" << h << "\n"
+           << "  Площа    : " << area()      << "\n"
+           << "  Периметр : " << perimeter() << "\n";
+    }
+};
+
+int main() {
+    const int N = 4;
+    Quadrilateral* shapes[N] = {
+        new Square(5),
+        new Rectangle(8, 3),
+        new Parallelogram(10, 6, 60),
+        new Trapezoid(4, 10, 5, 5, 4)
+    };
+
+    for (int i = 0; i < N; ++i)
+        cout << *shapes[i] << "\n";
+
+    int maxS = 0, minP = 0;
+    for (int i = 1; i < N; ++i) {
+        if (shapes[i]->area()      > shapes[maxS]->area())      maxS = i;
+        if (shapes[i]->perimeter() < shapes[minP]->perimeter()) minP = i;
+    }
+
+    cout << "Найбільша площа   : " << shapes[maxS]->name() << " = " << shapes[maxS]->area()      << "\n";
+    cout << "Найменший периметр: " << shapes[minP]->name() << " = " << shapes[minP]->perimeter() << "\n";
+
+    for (int i = 0; i < N; ++i)
+        delete shapes[i];
+
+    return 0;
+}
