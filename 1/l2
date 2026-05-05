@@ -311,3 +311,188 @@ int main() {
 
     return 0;
 }
+
+2.3
+#include <iostream>
+#include <string>
+
+using namespace std;
+
+class Person {
+protected:
+    string name;
+    int    age;
+
+public:
+    Person() : name(""), age(0) {}
+
+    Person(const string& n, int a) : name(n), age(a) {}
+
+    Person(const Person& o) : name(o.name), age(o.age) {}
+
+    Person& operator=(const Person& o) {
+        if (this == &o) return *this;
+        name = o.name;
+        age  = o.age;
+        return *this;
+    }
+
+    string getName() const { return name; }
+    int    getAge()  const { return age;  }
+
+    void setName(const string& n) { name = n; }
+    void setAge (int a)           { age  = a; }
+
+    virtual void print(ostream& os) const {
+        os << "Ім'я : " << name << "  Вік : " << age;
+    }
+
+    virtual ~Person() = default;
+};
+
+ostream& operator<<(ostream& os, const Person& p) {
+    p.print(os);
+    return os;
+}
+
+// ── Father ──────────────────────────────────────────────────
+class Father : public Person {
+    string profession;
+    int    childrenCount;
+
+public:
+    Father() : Person(), profession(""), childrenCount(0) {}
+
+    Father(const string& n, int a, const string& prof, int children)
+        : Person(n, a), profession(prof), childrenCount(children) {}
+
+    Father(const Father& o)
+        : Person(o), profession(o.profession), childrenCount(o.childrenCount) {}
+
+    Father& operator=(const Father& o) {
+        if (this == &o) return *this;
+        Person::operator=(o);
+        profession    = o.profession;
+        childrenCount = o.childrenCount;
+        return *this;
+    }
+
+    string getProfession()   const { return profession;    }
+    int    getChildrenCount()const { return childrenCount; }
+
+    void setProfession  (const string& p) { profession    = p; }
+    void setChildrenCount(int c)          { childrenCount = c; }
+
+    void print(ostream& os) const override {
+        os << "[Батько]  ";
+        Person::print(os);
+        os << "  Професія : " << profession
+           << "  Дітей : "    << childrenCount;
+    }
+};
+
+// ── Mother ──────────────────────────────────────────────────
+class Mother : public Person {
+    string hobby;
+    bool   employed;
+
+public:
+    Mother() : Person(), hobby(""), employed(false) {}
+
+    Mother(const string& n, int a, const string& h, bool emp)
+        : Person(n, a), hobby(h), employed(emp) {}
+
+    Mother(const Mother& o)
+        : Person(o), hobby(o.hobby), employed(o.employed) {}
+
+    Mother& operator=(const Mother& o) {
+        if (this == &o) return *this;
+        Person::operator=(o);
+        hobby    = o.hobby;
+        employed = o.employed;
+        return *this;
+    }
+
+    string getHobby()   const { return hobby;     }
+    bool   isEmployed() const { return employed;  }
+
+    void setHobby   (const string& h) { hobby    = h; }
+    void setEmployed(bool e)          { employed = e; }
+
+    void print(ostream& os) const override {
+        os << "[Мати]    ";
+        Person::print(os);
+        os << "  Хобі : "      << hobby
+           << "  Працює : "    << (employed ? "так" : "ні");
+    }
+};
+
+// ── Son ─────────────────────────────────────────────────────
+class Son : public Person {
+    string school;
+    double gpa;
+
+public:
+    Son() : Person(), school(""), gpa(0.0) {}
+
+    Son(const string& n, int a, const string& sch, double g)
+        : Person(n, a), school(sch), gpa(g) {}
+
+    Son(const Son& o)
+        : Person(o), school(o.school), gpa(o.gpa) {}
+
+    Son& operator=(const Son& o) {
+        if (this == &o) return *this;
+        Person::operator=(o);
+        school = o.school;
+        gpa    = o.gpa;
+        return *this;
+    }
+
+    string getSchool() const { return school; }
+    double getGpa()    const { return gpa;    }
+
+    void setSchool(const string& s) { school = s; }
+    void setGpa   (double g)        { gpa    = g; }
+
+    void print(ostream& os) const override {
+        os << "[Син]     ";
+        Person::print(os);
+        os << "  Школа : " << school
+           << "  GPA : "   << gpa;
+    }
+};
+
+// ── main ────────────────────────────────────────────────────
+int main() {
+    Father dad ("Олексій", 45, "Інженер", 2);
+    Mother mom ("Оксана",  42, "Читання", true);
+    Son    son1("Михайло", 17, "Ліцей №3", 4.8);
+    Son    son2("Дмитро",  14, "Школа №5", 4.5);
+
+    cout << dad  << "\n";
+    cout << mom  << "\n";
+    cout << son1 << "\n";
+    cout << son2 << "\n\n";
+
+    // Конструктор копіювання
+    Son son3(son1);
+    son3.setName("Копія Михайла");
+    cout << son3 << "\n";
+
+    // Оператор присвоювання
+    Father dad2;
+    dad2 = dad;
+    dad2.setName("Копія Олексія");
+    cout << dad2 << "\n\n";
+
+    // Поліморфізм
+    const int N = 4;
+    Person* family[N] = { &dad, &mom, &son1, &son2 };
+
+    cout << "=== Родина ===\n";
+    for (int i = 0; i < N; ++i)
+        cout << *family[i] << "\n";
+
+    return 0;
+}
