@@ -1,0 +1,476 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <iomanip>
+#include <algorithm>
+#include <sstream>
+#include <limits>
+
+using namespace std;
+
+// ─────────────────────────────────────────────
+//  Структури даних
+// ─────────────────────────────────────────────
+
+struct Train {
+    int         id;
+    string      number;       
+    string      type;         
+    string      stationFrom;
+    string      stationTo;
+    string      departureTime;
+    vector<string> stops;     
+    double      priceCoupe;
+    double      pricePlatz;
+};
+
+enum class RequestStatus {
+    Registered,
+    Selected,
+    Paid,
+    Cancelled
+};
+
+string statusToString(RequestStatus s) {
+    switch (s) {
+        case RequestStatus::Registered: return "Зареєстровано";
+        case RequestStatus::Selected:   return "Поїзд обрано";
+        case RequestStatus::Paid:       return "Оплачено";
+        case RequestStatus::Cancelled:  return "Скасовано";
+    }
+    return "";
+}
+
+struct Request {
+    int           id;
+    string        passengerName;
+    string        passengerDoc;
+    string        stationFrom;
+    string        stationTo;
+    string        date;
+    string        time;
+    RequestStatus status;
+    int           trainId;    
+    string        seatClass;  
+    double        totalPrice;
+};
+
+// ─────────────────────────────────────────────
+//  Глобальні дані
+// ─────────────────────────────────────────────
+
+vector<Train>   gTrains;
+vector<Request> gRequests;
+int             gNextTrainId   = 1;
+int             gNextRequestId = 1;
+
+// ─────────────────────────────────────────────
+//  Утиліти виводу
+// ─────────────────────────────────────────────
+
+void clearScreen() {
+#ifdef _WIN32
+    system("cls");
+#else
+    system("clear");
+#endif
+}
+
+void printLine(char c = '-', int n = 60) {
+    cout << string(n, c) << "\n";
+}
+
+void printHeader(const string& title) {
+    printLine('=');
+    cout << "  " << title << "\n";
+    printLine('=');
+}
+
+void pauseEnter() {
+    cout << "\nНатисніть Enter для продовження...";
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    cin.get();
+}
+
+string formatPrice(double p) {
+    ostringstream ss;
+    ss << fixed << setprecision(2) << p << " грн";
+    return ss.str();
+}
+
+// ─────────────────────────────────────────────
+//  Друк поїзда
+// ─────────────────────────────────────────────
+
+void printTrain(const Train& t, bool showIndex = false, int idx = 0) {
+    if (showIndex) cout << "  [" << idx << "] ";
+    else           cout << "  ";
+    cout << "Поїзд №" << t.number
+         << " (" << t.type << ")"
+         << "  відпр. " << t.departureTime << "\n";
+    cout << "      Маршрут: " << t.stationFrom << " → " << t.stationTo << "\n";
+    if (!t.stops.empty()) {
+        cout << "      Зупинки: ";
+        for (size_t i = 0; i < t.stops.size(); ++i) {
+            if (i) cout << ", ";
+            cout << t.stops[i];
+        }
+        cout << "\n";
+    }
+    cout << "      Ціни:  Купе — " << formatPrice(t.priceCoupe)
+         << "  |  Плацкарт — " << formatPrice(t.pricePlatz) << "\n";
+}
+
+// ─────────────────────────────────────────────
+//  Ініціалізація демо-даних
+// ─────────────────────────────────────────────
+
+void initDemo() {
+    Train t1;
+    t1.id = gNextTrainId++; t1.number = "742К"; t1.type = "Інтерсіті+";
+    t1.stationFrom = "Київ-Пасажирський"; t1.stationTo = "Одеса-Головна";
+    t1.departureTime = "07:15";
+    t1.stops = {"Козятин", "Жмеринка", "Вінниця"};
+    t1.priceCoupe = 980; t1.pricePlatz = 520;
+    gTrains.push_back(t1);
+
+    Train t2;
+    t2.id = gNextTrainId++; t2.number = "100"; t2.type = "Швидкий";
+    t2.stationFrom = "Київ-Пасажирський"; t2.stationTo = "Одеса-Головна";
+    t2.departureTime = "09:40";
+    t2.stops = {"Козятин", "Вінниця", "Помічна", "Балта"};
+    t2.priceCoupe = 720; t2.pricePlatz = 380;
+    gTrains.push_back(t2);
+
+    Train t3;
+    t3.id = gNextTrainId++; t3.number = "745К"; t3.type = "Інтерсіті+";
+    t3.stationFrom = "Харків-Пасажирський"; t3.stationTo = "Київ-Пасажирський";
+    t3.departureTime = "06:30";
+    t3.stops = {"Полтава-Київська", "Ромодан"};
+    t3.priceCoupe = 920; t3.pricePlatz = 490;
+    gTrains.push_back(t3);
+
+    Train t4;
+    t4.id = gNextTrainId++; t4.number = "61К"; t4.type = "Швидкий";
+    t4.stationFrom = "Київ-Пасажирський"; t4.stationTo = "Львів";
+    t4.departureTime = "17:20";
+    t4.stops = {"Козятин", "Бердичів", "Шепетівка"};
+    t4.priceCoupe = 790; t4.pricePlatz = 420;
+    gTrains.push_back(t4);
+}
+
+// ─────────────────────────────────────────────
+//  МОДУЛЬ ПАСАЖИРА
+// ─────────────────────────────────────────────
+
+void passengerMakeRequest() {
+    printHeader("НОВА ЗАЯВКА ПАСАЖИРА");
+
+    Request req;
+    req.id      = gNextRequestId++;
+    req.trainId = -1;
+    req.totalPrice = 0;
+
+    cout << "  Прізвище та ім'я пасажира: ";
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    getline(cin, req.passengerName);
+
+    cout << "  Номер документа: ";
+    getline(cin, req.passengerDoc);
+
+    cout << "  Станція відправлення: ";
+    getline(cin, req.stationFrom);
+
+    cout << "  Станція призначення:  ";
+    getline(cin, req.stationTo);
+
+    cout << "  Дата поїздки: ";
+    getline(cin, req.date);
+
+    cout << "  Бажаний час відправлення: ";
+    getline(cin, req.time);
+
+    req.status = RequestStatus::Registered;
+    gRequests.push_back(req);
+
+    cout << "\n  ✓ Заявку зареєстровано! Номер заявки: " << req.id << "\n";
+
+    // Пошук поїздів
+    vector<Train*> found;
+    for (auto& t : gTrains) {
+        if (t.stationFrom == req.stationFrom && t.stationTo == req.stationTo)
+            found.push_back(&t);
+    }
+
+    if (found.empty()) {
+        cout << "\n  На маршрут «" << req.stationFrom << " → " << req.stationTo
+             << "» поїздів не знайдено.\n";
+        pauseEnter();
+        return;
+    }
+
+    cout << "\n  Знайдено поїздів: " << found.size() << "\n";
+    printLine();
+    for (size_t i = 0; i < found.size(); ++i)
+        printTrain(*found[i], true, (int)i + 1);
+    printLine();
+
+    cout << "  Оберіть поїзд (1-" << found.size() << "): ";
+    int choice;
+    cin >> choice;
+    if (choice < 1 || choice > (int)found.size()) {
+        cout << "  Вибір скасовано.\n";
+        pauseEnter();
+        return;
+    }
+
+    Train* chosen = found[choice - 1];
+
+    cout << "  Клас вагона:\n";
+    cout << "    [1] Купе    — " << formatPrice(chosen->priceCoupe) << "\n";
+    cout << "    [2] Плацкарт — " << formatPrice(chosen->pricePlatz) << "\n";
+    cout << "  Ваш вибір: ";
+    int cls;
+    cin >> cls;
+    if (cls != 1 && cls != 2) {
+        cout << "  Невірний вибір.\n";
+        pauseEnter();
+        return;
+    }
+
+    // Оновлюємо заявку
+    for (auto& r : gRequests) {
+        if (r.id == req.id) {
+            r.trainId    = chosen->id;
+            r.seatClass  = (cls == 1) ? "Купе" : "Плацкарт";
+            r.totalPrice = (cls == 1) ? chosen->priceCoupe : chosen->pricePlatz;
+            r.status     = RequestStatus::Selected;
+
+            // Рахунок
+            double fee = r.totalPrice * 0.05;
+            double total = r.totalPrice + fee;
+            r.totalPrice = total;
+
+            printLine('=');
+            cout << "  РАХУНОК НА ОПЛАТУ\n";
+            printLine('=');
+            cout << "  Пасажир:    " << r.passengerName << "\n";
+            cout << "  Документ:   " << r.passengerDoc  << "\n";
+            cout << "  Маршрут:    " << r.stationFrom << " → " << r.stationTo << "\n";
+            cout << "  Поїзд:      №" << chosen->number << " (" << chosen->type << ")\n";
+            cout << "  Відправл.:  " << chosen->departureTime << "  Дата: " << r.date << "\n";
+            cout << "  Клас:       " << r.seatClass << "\n";
+            printLine();
+            cout << "  Вартість проїзду:  " << formatPrice(r.totalPrice - fee) << "\n";
+            cout << "  Сервісний збір 5%: " << formatPrice(fee) << "\n";
+            printLine();
+            cout << "  РАЗОМ ДО ОПЛАТИ:   " << formatPrice(total) << "\n";
+            printLine('=');
+
+            cout << "  Підтвердити оплату? [1/0]: ";
+            int pay; cin >> pay;
+            if (pay == 1) {
+                r.status = RequestStatus::Paid;
+                cout << "\n  ✓ Оплату прийнято! Квиток оформлено.\n";
+                cout << "    Заявка №" << r.id << " · Поїзд " << chosen->number
+                     << " · " << formatPrice(total) << "\n";
+            } else {
+                cout << "  Оплату скасовано. Заявка залишається зі статусом «Поїзд обрано».\n";
+            }
+            break;
+        }
+    }
+    pauseEnter();
+}
+
+void passengerMenu() {
+    while (true) {
+        clearScreen();
+        printHeader("МОДУЛЬ ПАСАЖИРА");
+        cout << "  [1] Зробити заявку на квиток\n";
+        cout << "  [0] Назад\n";
+        printLine();
+        cout << "  Ваш вибір: ";
+        int c; cin >> c;
+        if (c == 0) return;
+        if (c == 1) passengerMakeRequest();
+    }
+}
+
+// ─────────────────────────────────────────────
+//  МОДУЛЬ КАСИРА
+// ─────────────────────────────────────────────
+
+void cashierAddTrain() {
+    printHeader("ДОДАТИ НОВИЙ ПОЇЗД");
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
+    Train t;
+    t.id = gNextTrainId++;
+
+    cout << "  Номер поїзда: ";
+    getline(cin, t.number);
+
+    cout << "  Тип поїзда: ";
+    getline(cin, t.type);
+
+    cout << "  Станція відправлення: ";
+    getline(cin, t.stationFrom);
+
+    cout << "  Кінцева станція: ";
+    getline(cin, t.stationTo);
+
+    cout << "  Час відправлення: ";
+    getline(cin, t.departureTime);
+
+    cout << "  Кількість проміжних зупинок: ";
+    int ns; cin >> ns;
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    for (int i = 0; i < ns; ++i) {
+        cout << "    Зупинка " << i + 1 << ": ";
+        string s; getline(cin, s);
+        t.stops.push_back(s);
+    }
+
+    cout << "  Ціна Купе (грн): ";
+    cin >> t.priceCoupe;
+    cout << "  Ціна Плацкарт (грн): ";
+    cin >> t.pricePlatz;
+
+    gTrains.push_back(t);
+    cout << "\n  ✓ Поїзд №" << t.number << " додано до системи.\n";
+    pauseEnter();
+}
+
+void cashierListTrains() {
+    printHeader("СПИСОК ПОЇЗДІВ У СИСТЕМІ");
+    if (gTrains.empty()) {
+        cout << "  Поїздів немає.\n";
+    } else {
+        for (const auto& t : gTrains) {
+            printTrain(t);
+            printLine('-', 60);
+        }
+    }
+    pauseEnter();
+}
+
+void cashierDeleteTrain() {
+    printHeader("ВИДАЛИТИ ПОЇЗД");
+    if (gTrains.empty()) { cout << "  Поїздів немає.\n"; pauseEnter(); return; }
+    for (size_t i = 0; i < gTrains.size(); ++i) {
+        cout << "  [" << i + 1 << "] №" << gTrains[i].number
+             << " — " << gTrains[i].stationFrom << " → " << gTrains[i].stationTo << "\n";
+    }
+    cout << "  Оберіть номер для видалення: ";
+    int c; cin >> c;
+    if (c >= 1 && c <= (int)gTrains.size()) {
+        cout << "  Поїзд №" << gTrains[c - 1].number << " видалено.\n";
+        gTrains.erase(gTrains.begin() + c - 1);
+    }
+    pauseEnter();
+}
+
+void cashierMenu() {
+    while (true) {
+        clearScreen();
+        printHeader("МОДУЛЬ КАСИРА");
+        cout << "  [1] Додати новий поїзд\n";
+        cout << "  [2] Переглянути всі поїзди\n";
+        cout << "  [3] Видалити поїзд\n";
+        cout << "  [0] Назад\n";
+        printLine();
+        cout << "  Ваш вибір: ";
+        int c; cin >> c;
+        switch (c) {
+            case 1: cashierAddTrain();   break;
+            case 2: cashierListTrains(); break;
+            case 3: cashierDeleteTrain(); break;
+            case 0: return;
+        }
+    }
+}
+
+// ─────────────────────────────────────────────
+//  РЕЄСТР ЗАЯВОК
+// ─────────────────────────────────────────────
+
+void viewRequests() {
+    clearScreen();
+    printHeader("РЕЄСТР ЗАЯВОК");
+    if (gRequests.empty()) {
+        cout << "  Заявок немає.\n";
+        pauseEnter();
+        return;
+    }
+
+    cout << left
+         << setw(5)  << "№"
+         << setw(20) << "Пасажир"
+         << setw(24) << "Маршрут"
+         << setw(12) << "Дата"
+         << setw(8)  << "Поїзд"
+         << setw(12) << "Сума"
+         << "Статус\n";
+    printLine('-', 90);
+
+    for (const auto& r : gRequests) {
+        string route = r.stationFrom + "→" + r.stationTo;
+        if (route.size() > 22) route = route.substr(0, 20) + "..";
+
+        string trainNum = "—";
+        if (r.trainId != -1) {
+            for (const auto& t : gTrains)
+                if (t.id == r.trainId) { trainNum = t.number; break; }
+            
+            if (trainNum == "—") trainNum = "#" + to_string(r.trainId);
+        }
+
+        cout << left
+             << setw(5)  << r.id
+             << setw(20) << r.passengerName.substr(0, 18)
+             << setw(24) << route
+             << setw(12) << r.date
+             << setw(8)  << trainNum
+             << setw(12) << (r.totalPrice > 0 ? formatPrice(r.totalPrice) : "—")
+             << statusToString(r.status) << "\n";
+    }
+    pauseEnter();
+}
+
+// ─────────────────────────────────────────────
+//  ГОЛОВНЕ МЕНЮ
+// ─────────────────────────────────────────────
+
+int main() {
+#ifdef _WIN32
+    SetConsoleOutputCP(65001);  
+#endif
+
+    initDemo();
+
+    while (true) {
+        clearScreen();
+        printLine('=');
+        cout << "  ЗАЛІЗНИЧНА КАСА — Система бронювання квитків\n";
+        printLine('=');
+        cout << "  [1] Модуль пасажира\n";
+        cout << "  [2] Модуль касира\n";
+        cout << "  [3] Реєстр заявок\n";
+        cout << "  [0] Вихід\n";
+        printLine();
+        cout << "  Ваш вибір: ";
+        int choice;
+        cin >> choice;
+        switch (choice) {
+            case 1: passengerMenu(); break;
+            case 2: cashierMenu();   break;
+            case 3: viewRequests();  break;
+            case 0:
+                cout << "\n  До побачення!\n\n";
+                return 0;
+            default:
+                cout << "  Невірний вибір.\n";
+        }
+    }
+}
